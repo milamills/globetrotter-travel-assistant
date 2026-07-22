@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Sign up{% endblock %}
+{% block content %}
+<div class="container" style="max-width:460px;padding:60px 24px;">
+  <h1 style="font-size:1.7rem;margin:0 0 8px;">Create your account</h1>
+  <p style="color:var(--ink-soft);margin:0 0 26px;">Tell us what kind of trips you like — it shapes your recommendations.</p>
+
+  <div id="banner" class="banner"></div>
+
+  <form id="registerForm">
+    <div class="field">
+      <label for="username">Username</label>
+      <input id="username" name="username" required autocomplete="username">
+    </div>
+    <div class="field">
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" required minlength="4" autocomplete="new-password">
+    </div>
+    <div class="field">
+      <label>What do you enjoy? (pick a few)</label>
+      <div id="tagPicker" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;"></div>
+    </div>
+    <button class="btn" type="submit" style="width:100%;" id="submitBtn">Create account</button>
+  </form>
+
+  <p style="margin-top:20px;font-size:0.9rem;color:var(--ink-soft);">
+    Already have an account? <a href="/login" style="color:var(--forest-dark);font-weight:600;">Log in</a>
+  </p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const TAGS = ["beach","hiking","culture","nature","wildlife","nightlife","relaxation","history","adventure","food"];
+const picker = document.getElementById("tagPicker");
+const selected = new Set();
+
+picker.innerHTML = TAGS.map(t => `
+  <button type="button" class="tag" data-tag="${t}"
+    style="cursor:pointer;border:1px solid var(--line);background:#fff;">
+    ${t}
+  </button>
+`).join("");
+
+picker.querySelectorAll("button").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const tag = btn.dataset.tag;
+    if (selected.has(tag)) {
+      selected.delete(tag);
+      btn.style.background = "#fff";
+      btn.style.color = "var(--ink-soft)";
+      btn.style.borderColor = "var(--line)";
+    } else {
+      selected.add(tag);
+      btn.style.background = "var(--forest)";
+      btn.style.color = "#fff";
+      btn.style.borderColor = "var(--forest)";
+    }
+  });
+});
+
+const banner = document.getElementById("banner");
+document.getElementById("registerForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  GT.hideBanner(banner);
+  const btn = document.getElementById("submitBtn");
+  btn.disabled = true; btn.textContent = "Creating account…";
+  const username = document.getElementById("username").value.trim();
+  const password = document.getElementById("password").value;
+
+  try {
+    await GT.api("/register", {
+      method: "POST",
+      body: { username, password, preferences: Array.from(selected) }
+    });
+    const loginData = await GT.api("/login", { method: "POST", body: { username, password } });
+    GT.setSession(loginData.token, username);
+    window.location.href = "/app/recommendations";
+  } catch (err) {
+    GT.showBanner(banner, err.error === "username already taken"
+      ? "That username is already taken."
+      : (err.error || "Something went wrong. Please try again."));
+    btn.disabled = false; btn.textContent = "Create account";
+  }
+});
+</script>
+{% endblock %}

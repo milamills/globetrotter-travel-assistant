@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}My Trips{% endblock %}
+{% block content %}
+<div class="container" style="padding:44px 24px 60px;max-width:760px;">
+  <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:10px;">
+    <div>
+      <h1 style="font-size:1.8rem;margin:0 0 6px;">My trips</h1>
+      <p style="color:var(--ink-soft);margin:0;">Your itineraries, in order of departure.</p>
+    </div>
+    <a href="/app/destinations" class="btn">Plan a new trip</a>
+  </div>
+
+  <div id="timeline" style="margin-top:34px;"></div>
+</div>
+
+<!-- Share modal -->
+<div id="shareBackdrop" style="display:none;position:fixed;inset:0;background:rgba(22,36,28,0.45);z-index:50;align-items:center;justify-content:center;">
+  <div class="card" style="max-width:380px;width:92%;">
+    <h3 style="margin:0 0 4px;">Share this trip</h3>
+    <p style="color:var(--ink-soft);font-size:0.88rem;margin:0 0 16px;">Enter the username of a friend who's registered on GlobeTrotter.</p>
+    <div id="shareBanner" class="banner"></div>
+    <form id="shareForm">
+      <div class="field">
+        <label for="shareUsername">Username</label>
+        <input id="shareUsername" required>
+      </div>
+      <div style="display:flex;gap:10px;">
+        <button type="button" class="btn btn-outline" id="cancelShare" style="flex:1;">Cancel</button>
+        <button type="submit" class="btn" style="flex:1;">Share</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+GT.requireAuth();
+let activeItinId = null;
+
+function fmtDate(s) {
+  const d = new Date(s + "T00:00:00");
+  return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+}
+
+async function loadItineraries() {
+  const wrap = document.getElementById("timeline");
+  wrap.innerHTML = `<div class="skeleton" style="height:90px;margin-bottom:14px;"></div><div class="skeleton" style="height:90px;"></div>`;
+  try {
+    const data = await GT.api("/itineraries", { auth: true });
+    if (data.count === 0) {
+      wrap.innerHTML = `<div class="card" style="text-align:center;color:var(--ink-soft);">
+        No trips yet. <a href="/app/destinations" style="color:var(--forest-dark);font-weight:600;">Browse destinations</a> to plan your first one.
+      </div>`;
+      return;
+    }
+    wrap.innerHTML = `<div style="position:relative;">
+      <div style="position:absolute;left:17px;top:8px;bottom:8px;width:2px;background:repeating-linear-gradient(to bottom, var(--line) 0 6px, transparent 6px 12px);"></div>
+      ${data.itineraries.map(it => `
+        <div style="display:flex;gap:18px;margin-bottom:22px;">
+          <div style="flex:none;width:36px;height:36px;border-radius:50%;background:var(--forest);color:#fff;display:flex;align-items:center;justify-content:center;font-size:1rem;z-index:1;">📍</div>
+          <div class="card" style="flex:1;">
+            <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+              <div style="font-family:'Space Grotesk';font-weight:600;font-size:1.08rem;">${it.destination_name}</div>
+              <span class="tag">${fmtDate(it.start_date)} → ${fmtDate(it.end_date)}</span>
+            </div>
+            ${it.notes ? `<p style="font-size:0.88rem;color:var(--ink-soft);margin:8px 0;">${it.notes}</p>` : ""}
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;">
+              <div style="font-size:0.8rem;color:var(--ink-soft);">
+                ${it.shared_with.length ? `Shared with ${it.shared_with.join(", ")}` : "Not shared yet"}
+              </div>
+              <button class="btn-ghost" onclick="openShare('${it.id}')">Share</button>
+            </div>
+          </div>
+        </div>
+      `).join("")}
+    </div>`;
+  } catch (e) {
+    wrap.innerHTML = `<div class="banner error show">Couldn't load your trips.</div>`;
+  }
+}
+
+function openShare(itinId) {
+  activeItinId = itinId;
+  document.getElementById("shareForm").reset();
+  GT.hideBanner(document.getElementById("shareBanner"));
+  document.getElementById("shareBackdrop").style.display = "flex";
+}
+document.getElementById("cancelShare").addEventListener("click", () => {
+  document.getElementById("shareBackdrop").style.display = "none";
+});
+document.getElementById("shareForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const banner = document.getElementById("shareBanner");
+  GT.hideBanner(banner);
+  const username = document.getElementById("shareUsername").value.trim();
+  try {
+    await GT.api(`/itineraries/${activeItinId}/share`, { method: "POST", auth: true, body: { username } });
+    document.getElementById("shareBackdrop").style.display = "none";
+    loadItineraries();
+  } catch (err) {
+    GT.showBanner(banner, err.error || "Couldn't share this trip.");
+  }
+});
+
+loadItineraries();
+</script>
+{% endblock %}

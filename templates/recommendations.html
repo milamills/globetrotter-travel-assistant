@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Recommendations{% endblock %}
+{% block content %}
+<div class="container" style="padding:44px 24px 60px;">
+  <h1 style="font-size:1.8rem;margin:0 0 6px;">Recommended for you</h1>
+  <p id="basisLine" style="color:var(--ink-soft);margin:0 0 26px;"></p>
+
+  <div id="grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;">
+    <div class="skeleton" style="height:180px;"></div>
+    <div class="skeleton" style="height:180px;"></div>
+    <div class="skeleton" style="height:180px;"></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+GT.requireAuth();
+
+async function loadRecs() {
+  const grid = document.getElementById("grid");
+  try {
+    const data = await GT.api("/recommendations?limit=6", { auth: true });
+    const basis = document.getElementById("basisLine");
+    if (data.based_on_preferences.length || data.based_on_past_trips.length) {
+      const bits = [];
+      if (data.based_on_preferences.length) bits.push(`your preferences (${data.based_on_preferences.join(", ")})`);
+      if (data.based_on_past_trips.length) bits.push(`what you've booked before (${data.based_on_past_trips.join(", ")})`);
+      basis.textContent = "Based on " + bits.join(" and ") + ".";
+    } else {
+      basis.textContent = "Add preferences at sign-up or book a trip to sharpen these picks.";
+    }
+
+    if (data.recommendations.length === 0) {
+      grid.innerHTML = `<div class="card" style="grid-column:1/-1;text-align:center;color:var(--ink-soft);">
+        You've booked everywhere we know about! Check back as we add more destinations.
+      </div>`;
+      return;
+    }
+
+    grid.innerHTML = data.recommendations.map((d, i) => `
+      <div class="card" style="border-left:4px solid ${GT.regionColor(d.region)};position:relative;">
+        <div style="position:absolute;top:16px;right:16px;background:var(--gold);color:var(--ink);font-family:'Space Grotesk';font-weight:700;font-size:0.8rem;padding:3px 9px;border-radius:999px;">
+          match ${d.score}
+        </div>
+        <div style="font-family:'Space Grotesk';font-weight:600;font-size:1.08rem;padding-right:70px;">${i + 1}. ${d.name}</div>
+        <div style="color:var(--ink-soft);font-size:0.85rem;margin:2px 0 10px;">${d.region}</div>
+        <p style="font-size:0.88rem;color:var(--ink-soft);margin:0 0 12px;">${d.description}</p>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;">
+          ${d.tags.map(t => `<span class="tag" style="background:#F0EEE6;">${t}</span>`).join("")}
+        </div>
+        <a href="/app/destinations" class="btn" style="width:100%;margin-top:14px;">Plan this trip</a>
+      </div>
+    `).join("");
+  } catch (e) {
+    grid.innerHTML = `<div class="banner error show" style="grid-column:1/-1;">Couldn't load recommendations.</div>`;
+  }
+}
+loadRecs();
+</script>
+{% endblock %}

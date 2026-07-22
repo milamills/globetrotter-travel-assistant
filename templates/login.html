@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Log in{% endblock %}
+{% block content %}
+<div class="container" style="max-width:420px;padding:60px 24px;">
+  <h1 style="font-size:1.7rem;margin:0 0 8px;">Log in</h1>
+  <p style="color:var(--ink-soft);margin:0 0 26px;">Welcome back — pick up your trip planning where you left off.</p>
+
+  <div id="banner" class="banner"></div>
+
+  <form id="loginForm">
+    <div class="field">
+      <label for="username">Username</label>
+      <input id="username" name="username" required autocomplete="username">
+    </div>
+    <div class="field">
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" required autocomplete="current-password">
+    </div>
+    <button class="btn" type="submit" style="width:100%;" id="submitBtn">Log in</button>
+  </form>
+
+  <p style="margin-top:20px;font-size:0.9rem;color:var(--ink-soft);">
+    No account yet? <a href="/register" style="color:var(--forest-dark);font-weight:600;">Sign up</a>
+  </p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const banner = document.getElementById("banner");
+document.getElementById("loginForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  GT.hideBanner(banner);
+  const btn = document.getElementById("submitBtn");
+  btn.disabled = true; btn.textContent = "Logging in…";
+  const username = document.getElementById("username").value.trim();
+  const password = document.getElementById("password").value;
+  try {
+    const data = await GT.api("/login", { method: "POST", body: { username, password } });
+    GT.setSession(data.token, username);
+    const params = new URLSearchParams(window.location.search);
+    window.location.href = params.get("next") || "/";
+  } catch (err) {
+    GT.showBanner(banner, err.error === "invalid username or password"
+      ? "Incorrect username or password."
+      : "Something went wrong logging in. Please try again.");
+    btn.disabled = false; btn.textContent = "Log in";
+  }
+});
+</script>
+{% endblock %}

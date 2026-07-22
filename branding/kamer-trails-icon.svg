@@ -1,0 +1,40 @@
+<svg width="512" height="512" viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="bg" cx="35%" cy="30%" r="80%">
+      <stop offset="0%" stop-color="#12805A"/>
+      <stop offset="100%" stop-color="#0B4F38"/>
+    </radialGradient>
+    <filter id="soft" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#0B4F38" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+
+  <!-- outer badge -->
+  <circle cx="120" cy="120" r="112" fill="url(#bg)"/>
+
+  <!-- compass ring -->
+  <circle cx="120" cy="120" r="90" fill="none" stroke="#D9A441" stroke-width="2.5" opacity="0.85"/>
+
+  <!-- compass ticks: N E S W -->
+  <rect x="117" y="24" width="6" height="14" rx="2" fill="#D9A441"/>
+  <rect x="117" y="202" width="6" height="14" rx="2" fill="#D9A441" opacity="0.55"/>
+  <rect x="24" y="117" width="14" height="6" rx="2" fill="#D9A441" opacity="0.55"/>
+  <rect x="202" y="117" width="14" height="6" rx="2" fill="#D9A441" opacity="0.55"/>
+
+  <!-- map pin -->
+  <g filter="url(#soft)">
+    <path d="M120 56
+             C147 56 168 77 168 104
+             C168 132 138 158 122 172
+             C121 173 119 173 118 172
+             C102 158 72 132 72 104
+             C72 77 93 56 120 56 Z"
+          fill="#D9A441"/>
+    <circle cx="120" cy="103" r="19" fill="#FAFAF9"/>
+  </g>
+
+  <!-- trailing route dots -->
+  <circle cx="150" cy="176" r="6.5" fill="#FAFAF9" opacity="0.95"/>
+  <circle cx="167" cy="188" r="5" fill="#FAFAF9" opacity="0.75"/>
+  <circle cx="181" cy="198" r="3.5" fill="#FAFAF9" opacity="0.5"/>
+</svg>

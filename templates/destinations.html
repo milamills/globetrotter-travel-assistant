@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+{% block title %}Destinations{% endblock %}
+{% block content %}
+<div class="container" style="padding:44px 24px 60px;">
+  <h1 style="font-size:1.8rem;margin:0 0 6px;">Destinations</h1>
+  <p style="color:var(--ink-soft);margin:0 0 26px;">Search all 15 towns by name, region, or activity.</p>
+
+  <div class="card" style="margin-bottom:26px;display:grid;grid-template-columns:2fr 1fr 1fr;gap:14px;align-items:end;">
+    <div class="field" style="margin:0;">
+      <label for="q">Search</label>
+      <input id="q" placeholder="e.g. Mount Cameroon, waterfalls…">
+    </div>
+    <div class="field" style="margin:0;">
+      <label for="region">Region</label>
+      <select id="region">
+        <option value="">All regions</option>
+      </select>
+    </div>
+    <div class="field" style="margin:0;">
+      <label for="tag">Activity</label>
+      <select id="tag">
+        <option value="">All activities</option>
+      </select>
+    </div>
+  </div>
+
+  <div id="resultCount" style="color:var(--ink-soft);font-size:0.88rem;margin-bottom:14px;"></div>
+  <div id="grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;">
+    <div class="skeleton" style="height:180px;"></div>
+    <div class="skeleton" style="height:180px;"></div>
+    <div class="skeleton" style="height:180px;"></div>
+  </div>
+</div>
+
+<!-- Create itinerary modal -->
+<div id="modalBackdrop" style="display:none;position:fixed;inset:0;background:rgba(22,36,28,0.45);z-index:50;align-items:center;justify-content:center;">
+  <div class="card" style="max-width:420px;width:92%;">
+    <h3 id="modalTitle" style="margin:0 0 4px;">Plan a trip</h3>
+    <p id="modalSub" style="color:var(--ink-soft);font-size:0.88rem;margin:0 0 18px;"></p>
+    <div id="modalBanner" class="banner"></div>
+    <form id="itinForm">
+      <div class="field">
+        <label for="startDate">Start date</label>
+        <input id="startDate" type="date" required>
+      </div>
+      <div class="field">
+        <label for="endDate">End date</label>
+        <input id="endDate" type="date" required>
+      </div>
+      <div class="field">
+        <label for="notes">Notes (optional)</label>
+        <textarea id="notes" rows="2" placeholder="Anything you want to remember…"></textarea>
+      </div>
+      <div style="display:flex;gap:10px;">
+        <button type="button" class="btn btn-outline" id="cancelModal" style="flex:1;">Cancel</button>
+        <button type="submit" class="btn" style="flex:1;">Add to My Trips</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let ALL_TAGS = new Set();
+let ALL_REGIONS = new Set();
+let activeDestId = null;
+
+async function search() {
+  const grid = document.getElementById("grid");
+  const params = new URLSearchParams();
+  const q = document.getElementById("q").value.trim();
+  const region = document.getElementById("region").value;
+  const tag = document.getElementById("tag").value;
+  if (q) params.set("q", q);
+  if (region) params.set("region", region);
+  if (tag) params.set("tag", tag);
+
+  try {
+    const data = await GT.api("/destinations?" + params.toString());
+    document.getElementById("resultCount").textContent = `${data.count} destination${data.count === 1 ? "" : "s"}`;
+
+    data.destinations.forEach(d => { ALL_REGIONS.add(d.region); d.tags.forEach(t => ALL_TAGS.add(t)); });
+    populateFilters();
+
+    if (data.destinations.length === 0) {
+      grid.innerHTML = `<div class="card" style="grid-column:1/-1;text-align:center;color:var(--ink-soft);">
+        No destinations match that search. Try a different region or activity.
+      </div>`;
+      return;
+    }
+
+    grid.innerHTML = data.destinations.map(d => `
+      <div class="card" style="border-left:4px solid ${GT.regionColor(d.region)};">
+        <div style="display:flex;justify-content:space-between;align-items:start;">
+          <div style="font-family:'Space Grotesk';font-weight:600;font-size:1.08rem;">${d.name}</div>
+          <span class="tag">${d.region}</span>
+        </div>
+        <p style="font-size:0.88rem;color:var(--ink-soft);margin:8px 0 12px;min-height:40px;">${d.description}</p>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;">
+          ${d.tags.map(t => `<span class="tag" style="background:#F0EEE6;">${t}</span>`).join("")}
+        </div>
+        <button class="btn" style="width:100%;" onclick="openModal('${d.id}','${d.name.replace(/'/g,"\\'")}')">Plan a trip here</button>
+      </div>
+    `).join("");
+  } catch (e) {
+    grid.innerHTML = `<div class="banner error show" style="grid-column:1/-1;">Couldn't load destinations.</div>`;
+  }
+}
+
+function populateFilters() {
+  const regionSel = document.getElementById("region");
+  const tagSel = document.getElementById("tag");
+  if (regionSel.options.length === 1) {
+    Array.from(ALL_REGIONS).sort().forEach(r => regionSel.innerHTML += `<option value="${r}">${r}</option>`);
+  }
+  if (tagSel.options.length === 1) {
+    Array.from(ALL_TAGS).sort().forEach(t => tagSel.innerHTML += `<option value="${t}">${t}</option>`);
+  }
+}
+
+function openModal(destId, destName) {
+  if (!GT.isAuthed()) {
+    window.location.href = "/login?next=/app/destinations";
+    return;
+  }
+  activeDestId = destId;
+  document.getElementById("modalTitle").textContent = `Plan a trip to ${destName}`;
+  document.getElementById("modalSub").textContent = "Pick your dates and we'll add it to My Trips.";
+  document.getElementById("itinForm").reset();
+  GT.hideBanner(document.getElementById("modalBanner"));
+  document.getElementById("modalBackdrop").style.display = "flex";
+}
+document.getElementById("cancelModal").addEventListener("click", () => {
+  document.getElementById("modalBackdrop").style.display = "none";
+});
+
+document.getElementById("itinForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const banner = document.getElementById("modalBanner");
+  GT.hideBanner(banner);
+  try {
+    await GT.api("/itineraries", {
+      method: "POST", auth: true,
+      body: {
+        destination_id: activeDestId,
+        start_date: document.getElementById("startDate").value,
+        end_date: document.getElementById("endDate").value,
+        notes: document.getElementById("notes").value,
+      }
+    });
+    document.getElementById("modalBackdrop").style.display = "none";
+    window.location.href = "/app/itineraries";
+  } catch (err) {
+    GT.showBanner(banner, err.error || "Couldn't create that itinerary.");
+  }
+});
+
+["q","region","tag"].forEach(id => {
+  document.getElementById(id).addEventListener(id === "q" ? "input" : "change", debounce(search, 250));
+});
+function debounce(fn, ms) {
+  let t;
+  return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+}
+
+search();
+</script>
+{% endblock %}

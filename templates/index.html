@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Home{% endblock %}
+{% block content %}
+
+<section style="border-bottom:1px solid var(--line); background:linear-gradient(180deg,#F1EFE6 0%, var(--bg) 100%);">
+  <div class="container" style="padding:76px 24px 56px;">
+    <div class="tag" style="margin-bottom:18px;">Phase 1 — Monolith · CS 4122</div>
+    <h1 style="font-size:2.6rem;line-height:1.08;max-width:640px;margin:0 0 18px;">
+      Plan your next trip across Cameroon, town by town.
+    </h1>
+    <p style="max-width:520px;color:var(--ink-soft);font-size:1.05rem;margin:0 0 30px;">
+      Search real destinations from Kribi's beaches to Buea's volcano trails, get
+      recommendations tuned to what you like, and build an itinerary you can share.
+    </p>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;">
+      <a href="/app/destinations" class="btn">Browse destinations</a>
+      <a href="/register" class="btn btn-outline">Create an account</a>
+    </div>
+  </div>
+</section>
+
+<section class="container" style="padding:52px 24px;">
+  <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:20px;">
+    <h2 style="font-size:1.4rem;margin:0;">Popular right now</h2>
+    <a href="/app/destinations" style="font-size:0.9rem;color:var(--forest-dark);font-weight:600;">See all →</a>
+  </div>
+  <div id="featuredGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px;">
+    <div class="skeleton" style="height:150px;"></div>
+    <div class="skeleton" style="height:150px;"></div>
+    <div class="skeleton" style="height:150px;"></div>
+  </div>
+</section>
+
+<section class="container" style="padding:0 24px 60px;">
+  <div class="card" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:24px;">
+    <div>
+      <div style="font-family:'Space Grotesk';font-weight:700;font-size:1.3rem;color:var(--forest-dark);">15</div>
+      <div style="color:var(--ink-soft);font-size:0.9rem;">towns across all 10 regions</div>
+    </div>
+    <div>
+      <div style="font-family:'Space Grotesk';font-weight:700;font-size:1.3rem;color:var(--forest-dark);">1 process</div>
+      <div style="color:var(--ink-soft);font-size:0.9rem;">single Flask monolith, no external DB</div>
+    </div>
+    <div>
+      <div style="font-family:'Space Grotesk';font-weight:700;font-size:1.3rem;color:var(--forest-dark);">JWT</div>
+      <div style="color:var(--ink-soft);font-size:0.9rem;">stateless auth, 12-hour session tokens</div>
+    </div>
+  </div>
+</section>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+(async function loadFeatured() {
+  const grid = document.getElementById("featuredGrid");
+  try {
+    const data = await GT.api("/destinations");
+    const top = data.destinations.slice(0, 3);
+    grid.innerHTML = top.map(d => `
+      <a href="/app/destinations" class="card" style="border-left:4px solid ${GT.regionColor(d.region)};display:block;">
+        <div style="font-family:'Space Grotesk';font-weight:600;font-size:1.05rem;">${d.name}</div>
+        <div style="color:var(--ink-soft);font-size:0.85rem;margin:4px 0 10px;">${d.region}</div>
+        <div style="font-size:0.88rem;color:var(--ink-soft);">${d.description}</div>
+      </a>
+    `).join("");
+  } catch (e) {
+    grid.innerHTML = `<div class="banner error show">Couldn't load destinations. Is the server running?</div>`;
+  }
+})();
+</script>
+{% endblock %}
