@@ -1,0 +1,800 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Buea Trails — Travel Assistant</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+  :root{
+    --ink:#16241C; --ink-soft:#3F5147; --bg:#FAFAF9; --surface:#FFFFFF;
+    --line:#E7E4DC; --forest:#0F6B4C; --forest-dark:#0B4F38;
+    --gold:#D9A441; --gold-dark:#B9832B; --danger:#B3432D;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{background:var(--bg);color:var(--ink);font-family:'Inter',system-ui,sans-serif;line-height:1.5;-webkit-font-smoothing:antialiased;}
+  h1,h2,h3,.display{font-family:'Space Grotesk',sans-serif;letter-spacing:-0.01em;color:var(--ink);}
+  a{color:inherit;text-decoration:none;}
+  .container{max-width:1080px;margin:0 auto;padding:0 24px;}
+  nav.topnav{position:sticky;top:0;z-index:40;background:rgba(250,250,249,0.95);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);}
+  .navwrap{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;max-width:1080px;margin:0 auto;flex-wrap:wrap;gap:10px;}
+  .brand{display:flex;align-items:center;gap:8px;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:1.1rem;}
+  .navlinks{display:flex;align-items:center;gap:4px;flex-wrap:wrap;}
+  .navlinks button{background:none;border:none;font-family:inherit;cursor:pointer;padding:8px 12px;border-radius:8px;font-size:0.9rem;font-weight:500;color:var(--ink-soft);}
+  .navlinks button:hover{background:#F0EEE6;color:var(--ink);}  
+  .navlinks button.active{color:var(--forest-dark);background:#E7F1EC;}
+  #navUserSlot{display:flex;align-items:center;gap:8px;font-size:0.85rem;}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px;}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--forest);color:#fff;border:none;border-radius:9px;padding:11px 20px;font-size:0.92rem;font-weight:600;cursor:pointer;font-family:inherit;transition:background .15s;}
+  .btn:hover{background:var(--forest-dark);}  
+  .btn-gold{background:var(--gold);color:var(--ink);}  
+  .btn-gold:hover{background:var(--gold-dark);color:#fff;}  
+  .btn-outline{background:transparent;color:var(--forest-dark);border:1.5px solid var(--forest);}  
+  .btn-outline:hover{background:var(--forest);color:#fff;}  
+  .btn-sm{padding:6px 12px;font-size:0.82rem;border-radius:7px;}  
+  input,select,textarea{font-family:inherit;font-size:0.92rem;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);width:100%;}
+  input:focus,select:focus,textarea:focus{outline:2px solid var(--forest);outline-offset:1px;border-color:var(--forest);}  
+  label{font-size:0.83rem;font-weight:600;color:var(--ink-soft);display:block;margin-bottom:5px;}  
+  .field{margin-bottom:14px;}  
+  .tag{display:inline-flex;align-items:center;font-size:0.72rem;font-weight:600;padding:3px 9px;border-radius:999px;background:#F0EEE6;color:var(--ink-soft);}  
+  .tag.pick{cursor:pointer;user-select:none;border:1px solid var(--line);}  
+  .tag.pick.on{background:var(--forest);color:#fff;border-color:var(--forest);}  
+  .banner{padding:10px 13px;border-radius:9px;font-size:0.85rem;margin-bottom:14px;display:none;}  
+  .banner.error{background:#FBEAE5;color:var(--danger);border:1px solid #EFC7BA;}  
+  .banner.success{background:#E7F1EC;color:var(--forest-dark);border:1px solid #BFE0CE;}  
+  .banner.show{display:block;}  
+  .view{display:none;}  
+  .view.active{display:block;}  
+  footer{border-top:1px solid var(--line);margin-top:56px;padding:24px 0;color:var(--ink-soft);font-size:0.83rem;}  
+  .modalBackdrop{display:none;position:fixed;inset:0;background:rgba(22,36,28,0.45);z-index:60;align-items:center;justify-content:center;padding:16px;}  
+  .modalBackdrop.show{display:flex;}  
+  .leaflet-popup-content{font-family:'Inter',sans-serif;}  
+  .case-badge{display:inline-flex;align-items:center;gap:6px;background:var(--forest-dark);color:#fff;font-size:0.72rem;font-weight:700;letter-spacing:.03em;text-transform:uppercase;padding:5px 11px;border-radius:999px;}  
+  .nav-username { color:var(--ink-soft); margin-right:8px; }  
+  @media (max-width:640px){ .navlinks span.linktext{display:none;} }
+</style>
+</head>
+<body>
+
+<nav class="topnav">
+  <div class="navwrap">
+    <div class="brand">
+      <svg width="26" height="26" viewBox="0 0 26 26" fill="none" aria-hidden="true">
+        <circle cx="13" cy="13" r="12" stroke="#0F6B4C" stroke-width="1.6"/>
+        <path d="M13 4C13 4 8 9 8 13.5C8 17 10 19 13 19C16 19 18 17 18 13.5C18 9 13 4 13 4Z" fill="#D9A441"/>
+        <circle cx="13" cy="12.7" r="2.1" fill="#FAFAF9"/>
+      </svg>
+      Buea Trails
+    </div>
+    <div class="navlinks" id="navLinks" role="navigation" aria-label="Main">
+      <button data-view="home" class="active">Home</button>
+      <button data-view="destinations">Destinations</button>
+      <button data-view="map">Map</button>
+      <button data-view="recommendations">Recommendations</button>
+      <button data-view="trips">My Trips</button>
+    </div>
+    <div id="navUserSlot" aria-live="polite"></div>
+  </div>
+</nav>
+
+<main>
+
+  <!-- HOME -->
+  <section class="view active" id="view-home">
+    <div style="border-bottom:1px solid var(--line); background:linear-gradient(180deg,#F1EFE6 0%, var(--bg) 100%);">
+      <div class="container" style="padding:60px 24px 50px;">
+        <div class="case-badge">Case study · Buea, Southwest Region</div>
+        <h1 style="font-size:2.4rem;line-height:1.1;max-width:640px;margin:16px 0 16px;">
+          Buea Trails: a Cameroon travel assistant, grounded in one city.
+        </h1>
+        <p style="max-width:560px;color:var(--ink-soft);font-size:1.02rem;margin:0 0 26px;">
+          Buea — gateway to Mount Cameroon — is the flagship case study: every feature below
+          (search, personalized recommendations, itinerary building, mapping) is demonstrated
+          against real Buea neighborhoods and landmarks first, then extended to 15 towns
+          across Cameroon.
+        </p>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;">
+          <button class="btn" onclick="setView('map')">Explore the Buea map</button>
+          <button class="btn btn-outline" onclick="setView('destinations')">Browse all destinations</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" style="padding:44px 24px 10px;">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+        <h2 style="font-size:1.3rem;margin:0;">Buea case study: landmarks &amp; neighborhoods</h2>
+        <span style="font-size:0.85rem;color:var(--ink-soft);">Click a marker for details</span>
+      </div>
+      <div id="homeMap" style="height:360px;border-radius:14px;overflow:hidden;border:1px solid var(--line);"></div>
+    </div>
+
+    <div class="container" style="padding:44px 24px 60px;">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:16px;">
+        <h2 style="font-size:1.3rem;margin:0;">Popular across Cameroon</h2>
+        <button class="btn-outline btn btn-sm" onclick="setView('destinations')">See all →</button>
+      </div>
+      <div id="featuredGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;"></div>
+    </div>
+  </section>
+
+  <!-- DESTINATIONS -->
+  <section class="view" id="view-destinations">
+    <div class="container" style="padding:40px 24px 60px;">
+      <h1 style="font-size:1.7rem;margin:0 0 6px;">Destinations</h1>
+      <p style="color:var(--ink-soft);margin:0 0 24px;">Search all 15 towns by name, region, or activity — Buea included.</p>
+      <div class="card" style="margin-bottom:24px;display:grid;grid-template-columns:2fr 1fr 1fr;gap:14px;align-items:end;">
+        <div class="field" style="margin:0;">
+          <label>Search</label>
+          <input id="destQ" placeholder="e.g. Mount Cameroon, waterfalls…">
+        </div>
+        <div class="field" style="margin:0;">
+          <label>Region</label>
+          <select id="destRegion"><option value="">All regions</option></select>
+        </div>
+        <div class="field" style="margin:0;">
+          <label>Activity</label>
+          <select id="destTag"><option value="">All activities</option></select>
+        </div>
+      </div>
+      <div id="destCount" style="color:var(--ink-soft);font-size:0.86rem;margin-bottom:12px;"></div>
+      <div id="destGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;"></div>
+    </div>
+  </section>
+
+  <!-- MAP -->
+  <section class="view" id="view-map">
+    <div class="container" style="padding:40px 24px 60px;">
+      <h1 style="font-size:1.7rem;margin:0 0 6px;">Cameroon map</h1>
+      <p style="color:var(--ink-soft);margin:0 0 20px;">
+        All 15 destinations plotted. <span class="tag" style="background:#F5E6C4;color:var(--gold-dark);">★ gold marker</span> = Buea, the case-study city.
+      </p>
+      <div id="fullMap" style="height:480px;border-radius:14px;overflow:hidden;border:1px solid var(--line);"></div>
+    </div>
+  </section>
+
+  <!-- RECOMMENDATIONS -->
+  <section class="view" id="view-recommendations">
+    <div class="container" style="padding:40px 24px 60px;">
+      <h1 style="font-size:1.7rem;margin:0 0 6px;">Recommendations</h1>
+      <p style="color:var(--ink-soft);margin:0 0 24px;">Scored from your stated preferences and past trips: +3 per preference match, +2 per past-trip tag match, plus a small popularity tie-breaker.</p>
+      <div id="recGate"></div>
+      <div id="recContent" style="display:none;">
+        <div id="recBasis" class="card" style="margin-bottom:22px;font-size:0.88rem;color:var(--ink-soft);"></div>
+        <div id="recGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TRIPS -->
+  <section class="view" id="view-trips">
+    <div class="container" style="padding:40px 24px 60px;">
+      <h1 style="font-size:1.7rem;margin:0 0 6px;">My Trips</h1>
+      <p style="color:var(--ink-soft);margin:0 0 24px;">Itineraries you've created, sorted by start date.</p>
+      <div id="tripGate"></div>
+      <div id="tripGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;"></div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="container" style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+    <span>Buea Trails — Cameroon Travel Assistant (case study: Buea)</span>
+    <span>Rebuilt as a standalone client demo from the GlobeTrotter/Kamer Trails Phase 1 project</span>
+  </div>
+</footer>
+
+<!-- Auth / Profile modal (reused) -->
+<div class="modalBackdrop" id="authBackdrop" role="dialog" aria-modal="true" aria-hidden="true">
+  <div class="card" style="max-width:420px;width:92%;" id="authDialog" tabindex="-1">
+    <h3 id="authTitle" style="margin:0 0 4px;">Log in</h3>
+    <p style="color:var(--ink-soft);font-size:0.86rem;margin:0 0 16px;" id="authSub">Welcome back.</p>
+    <div class="banner" id="authBanner" role="alert"></div>
+    <form id="authForm">
+      <div class="field"><label>Username</label><input id="authUser" required autocomplete="username"></div>
+      <div class="field"><label>Password</label><input id="authPass" type="password" required autocomplete="current-password"></div>
+      <div class="field" id="prefField" style="display:none;">
+        <label>Interests (pick a few)</label>
+        <div id="prefTags" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:6px;">
+        <button type="button" class="btn btn-outline" style="flex:1;" onclick="closeAuth()">Cancel</button>
+        <button type="submit" class="btn" style="flex:1;" id="authSubmitBtn">Log in</button>
+      </div>
+      <p style="font-size:0.82rem;color:var(--ink-soft);margin:14px 0 0;text-align:center;">
+        <span id="authSwitchLabel">New here?</span>
+        <a href="javascript:void(0)" style="color:var(--forest-dark);font-weight:600;" onclick="toggleAuthMode()" id="authSwitchLink">Create an account</a>
+      </p>
+    </form>
+  </div>
+</div>
+
+<!-- Plan trip modal -->
+<div class="modalBackdrop" id="tripBackdrop" role="dialog" aria-modal="true" aria-hidden="true">
+  <div class="card" style="max-width:420px;width:92%;" id="tripDialog" tabindex="-1">
+    <h3 id="tripModalTitle" style="margin:0 0 4px;">Plan a trip</h3>
+    <p style="color:var(--ink-soft);font-size:0.86rem;margin:0 0 16px;">Pick your dates and we'll add it to My Trips.</p>
+    <div class="banner" id="tripBanner"></div>
+    <form id="tripForm">
+      <div class="field"><label>Start date</label><input id="tripStart" type="date" required></div>
+      <div class="field"><label>End date</label><input id="tripEnd" type="date" required></div>
+      <div class="field"><label>Notes (optional)</label><textarea id="tripNotes" rows="2"></textarea></div>
+      <div style="display:flex;gap:10px;">
+        <button type="button" class="btn btn-outline" style="flex:1;" onclick="closeTripModal()">Cancel</button>
+        <button type="submit" class="btn" style="flex:1;">Save trip</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+/* =========================================================================
+   DATA — Cameroon-wide destinations (unchanged towns), each with lat/lng
+   ========================================================================= */
+const DESTINATIONS = [
+  {id:"dst001",name:"Yaoundé",region:"Centre",tags:["city","culture","history","nightlife"],description:"Cameroon's hilly capital, home to national museums, the Unity Palace, and Mfoundi markets.",popularity:95,lat:3.8480,lng:11.5021},
+  {id:"dst002",name:"Douala",region:"Littoral",tags:["city","business","nightlife","food"],description:"The economic capital, known for its port, vibrant nightlife, and the Akwa business district.",popularity:96,lat:4.0511,lng:9.7679},
+  {id:"dst003",name:"Limbe",region:"Southwest",tags:["beach","nature","relaxation","wildlife"],description:"Black-sand Atlantic beaches, the Limbe Wildlife Centre, and views of Mount Cameroon.",popularity:88,lat:4.0225,lng:9.2149},
+  {id:"dst004",name:"Kribi",region:"South",tags:["beach","relaxation","nature","seafood"],description:"White-sand beaches, the Lobé Waterfalls that flow directly into the sea, and fresh grilled fish.",popularity:90,lat:2.9394,lng:9.9095},
+  {id:"dst005",name:"Bafoussam",region:"West",tags:["culture","market","chieftaincy","food"],description:"Heart of the Bamiléké grassfields, known for its markets and traditional chieftaincy palaces.",popularity:78,lat:5.4737,lng:10.4176},
+  {id:"dst006",name:"Bamenda",region:"Northwest",tags:["nature","hiking","culture","highlands"],description:"Cool highland town surrounded by ring-road scenery, waterfalls, and grassfield culture.",popularity:75,lat:5.9631,lng:10.1591},
+  {id:"dst007",name:"Buea",region:"Southwest",tags:["hiking","nature","adventure","mountain"],description:"Gateway to Mount Cameroon, West Africa's highest peak — the flagship case study for this app.",popularity:84,lat:4.1527,lng:9.2920,isCaseStudy:true},
+  {id:"dst008",name:"Dschang",region:"West",tags:["nature","relaxation","hiking","climate"],description:"Cool climate hill town famous for its municipal lake and forested walking trails.",popularity:72,lat:5.4453,lng:10.0534},
+  {id:"dst009",name:"Garoua",region:"North",tags:["wildlife","safari","culture","nature"],description:"Gateway to Bénoué and Faro national parks, with savanna wildlife and Sahelian culture.",popularity:68,lat:9.3265,lng:13.3958},
+  {id:"dst010",name:"Maroua",region:"Far North",tags:["culture","craft","desert","history"],description:"Known for leatherwork, the Rhumsiki rock formations nearby, and Sahelian architecture.",popularity:66,lat:10.5913,lng:14.3153},
+  {id:"dst011",name:"Ngaoundéré",region:"Adamawa",tags:["nature","waterfalls","highlands","adventure"],description:"Highland cattle-country town near the Tello and Vina waterfalls.",popularity:64,lat:7.3167,lng:13.5833},
+  {id:"dst012",name:"Ebolowa",region:"South",tags:["nature","cocoa","culture","forest"],description:"Forested cocoa-growing town in southern Cameroon, close to Campo Ma'an National Park.",popularity:58,lat:2.9167,lng:11.1500},
+  {id:"dst013",name:"Foumban",region:"West",tags:["culture","history","art","chieftaincy"],description:"Historic Bamoun capital, home to the Royal Palace and Museum and famous bronze artisans.",popularity:74,lat:5.7167,lng:10.9000},
+  {id:"dst014",name:"Bertoua",region:"East",tags:["nature","forest","culture"],description:"Gateway to Cameroon's eastern rainforest region and Baka pygmy cultural sites.",popularity:52,lat:4.5833,lng:13.6833},
+  {id:"dst015",name:"Kribi-Campo",region:"South",tags:["beach","nature","wildlife","adventure"],description:"Coastal stretch bordering Campo Ma'an National Park, ideal for beach and forest combined trips.",popularity:60,lat:2.8500,lng:9.8500},
+];
+
+const BUEA_SPOTS = [
+  {name:"University of Buea (Molyko)",category:"education",lat:4.1508,lng:9.2680,description:"UB's main campus in Molyko — the town's largest student population hub."},
+  {name:"Mount Cameroon Trailhead (Upper Farms)",category:"hiking",lat:4.1685,lng:9.2775,description:"Common starting point for ascents of Mount Cameroon, West Africa's highest peak."},
+  {name:"Buea Mountain Hotel",category:"stay",lat:4.1560,lng:9.2830,description:"Historic hillside hotel with panoramic views toward the coast."},
+  {name:"Buea Central Market",category:"market",lat:4.1545,lng:9.2915,description:"Main commercial market in the town center."},
+  {name:"Fon's Palace, Buea",category:"culture",lat:4.1575,lng:9.2895,description:"Traditional palace of the paramount chief (Fon) of Buea."},
+  {name:"Molyko Omnisport Stadium",region:"Southwest",category:"sports",lat:4.1470,lng:9.2660,description:"Regional stadium used for football and athletics."},
+  {name:"Small Soppo",category:"neighborhood",lat:4.1490,lng:9.2830,description:"Residential and commercial neighborhood near the town center."},
+  {name:"Bonduma",category:"neighborhood",lat:4.1650,lng:9.2830,description:"Hillside residential neighborhood with cool climate, close to the mountain."},
+];
+
+const REGION_COLORS = {"Centre":"#0F6B4C","Littoral":"#2563EB","Southwest":"#D9A441","South":"#0EA5A4","West":"#B3432D","Northwest":"#7C3AED","North":"#EA580C","Far North":"#DB2777","Adamawa":"#65A30D","East":"#0284C7"};
+function regionColor(r){return REGION_COLORS[r] || "#3F5147";}
+
+/* =========================================================================
+   STATE — storage wrapper (robust localStorage fallback)
+   ========================================================================= */
+const STATE_KEY = "buea-trails-state";
+let STATE = { users: [], itineraries: [], sessionUser: null };
+
+async function loadState() {
+  try {
+    const raw = localStorage.getItem(STATE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      // ensure structure
+      STATE = Object.assign({ users: [], itineraries: [], sessionUser: null }, parsed || {});
+      // ensure arrays exist
+      STATE.users = Array.isArray(STATE.users) ? STATE.users : [];
+      STATE.itineraries = Array.isArray(STATE.itineraries) ? STATE.itineraries : [];
+    }
+  } catch (e) {
+    console.warn("State load failed, using default state.", e);
+  }
+}
+async function saveState() {
+  try {
+    const payload = JSON.stringify(STATE);
+    localStorage.setItem(STATE_KEY, payload);
+  } catch (e) {
+    console.error("Storage save failed", e);
+  }
+}
+
+function currentUser() { return STATE.sessionUser ? STATE.users.find(u => u.username === STATE.sessionUser) || null : null; }
+function isAuthed() { return !!currentUser(); }
+
+/* =========================================================================
+   NAV / VIEW ROUTING
+   ========================================================================= */
+function setView(name) {
+  document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
+  const target = document.getElementById("view-" + name);
+  if (!target) return;
+  target.classList.add("active");
+  document.querySelectorAll("#navLinks button").forEach(b => b.classList.toggle("active", b.dataset.view === name));
+  if (name === "map") setTimeout(() => { if (fullMap) fullMap.invalidateSize(); }, 200);
+  if (name === "home") setTimeout(() => { if (homeMap) homeMap.invalidateSize(); }, 200);
+  if (name === "recommendations") renderRecommendations();
+  if (name === "trips") renderTrips();
+}
+document.querySelectorAll("#navLinks button").forEach(b => b.addEventListener("click", () => setView(b.dataset.view)));
+
+function renderNavUser() {
+  const slot = document.getElementById("navUserSlot");
+  const u = currentUser();
+  if (u) {
+    slot.innerHTML = `<span class="nav-username" style="color:var(--ink-soft);">Signed in as <strong style="color:var(--ink);">${escapeHtml(u.username)}</strong></span>
+      <button class="btn btn-outline btn-sm" onclick="openProfile()">Profile</button>
+      <button class="btn btn-outline btn-sm" onclick="logout()" style="margin-left:6px;">Log out</button>`;
+  } else {
+    slot.innerHTML = `<button class="btn btn-outline btn-sm" onclick="openAuth('login')">Log in</button>
+      <button class="btn btn-sm" onclick="openAuth('register')">Sign up</button>`;
+  }
+}
+function escapeHtml(s){return String(s).replace(/[&<>\"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"}[c]));}
+
+/* =========================================================================
+   AUTH / PROFILE
+   ========================================================================= */
+let authMode = "login"; // login | register | profile
+const ALL_TAGS = Array.from(new Set(DESTINATIONS.flatMap(d => d.tags))).sort();
+
+function buildPrefTags(container, selected=[]) {
+  const sel = Array.isArray(selected) ? selected : [];
+  container.innerHTML = ALL_TAGS.map(t =>
+    `<span class="tag pick ${sel.includes(t) ? 'on':''}" data-tag="${t}" role="button" tabindex="0">${t}</span>`).join("");
+  // make keyboard toggles work
+  container.querySelectorAll(".tag.pick").forEach(el=>{
+    el.addEventListener("click", ()=> el.classList.toggle("on"));
+    el.addEventListener("keydown", (e)=> { if (e.key === " "||e.key==="Enter"){ e.preventDefault(); el.classList.toggle("on"); } });
+  });
+}
+
+function openAuth(mode) {
+  authMode = mode;
+  const title = mode === "login" ? "Log in" : "Create an account";
+  document.getElementById("authTitle").textContent = title;
+  document.getElementById("authSub").textContent = mode === "login" ? "Welcome back." : "Pick a few interests to tune your recommendations.";
+  document.getElementById("authSubmitBtn").textContent = mode === "login" ? "Log in" : "Create account";
+  document.getElementById("authSwitchLabel").textContent = mode === "login" ? "New here?" : "Already have an account?";
+  document.getElementById("authSwitchLink").textContent = mode === "login" ? "Create an account" : "Log in";
+  document.getElementById("prefField").style.display = mode === "register" ? "block" : "none";
+  document.getElementById("authForm").reset();
+  hideBanner(document.getElementById("authBanner"));
+  if (mode === "register") buildPrefTags(document.getElementById("prefTags"), []);
+  // ensure username editable
+  document.getElementById("authUser").removeAttribute("readonly");
+  const backdrop = document.getElementById("authBackdrop");
+  backdrop.classList.add("show");
+  backdrop.setAttribute("aria-hidden","false");
+  trapFocus(backdrop.querySelector('#authDialog'), backdrop);
+  setTimeout(()=>document.getElementById("authUser").focus(), 90);
+}
+
+function openProfile() {
+  const user = currentUser();
+  if (!user) { openAuth('login'); return; }
+  authMode = 'profile';
+  document.getElementById("authTitle").textContent = "Edit profile";
+  document.getElementById("authSub").textContent = "Update your preferences or change your password.";
+  document.getElementById("authSubmitBtn").textContent = "Save";
+  document.getElementById("authSwitchLabel").textContent = "";
+  document.getElementById("authSwitchLink").textContent = " ";
+  // show prefs
+  document.getElementById("prefField").style.display = "block";
+  buildPrefTags(document.getElementById("prefTags"), user.preferences || []);
+  // prefill username and make readonly
+  document.getElementById("authUser").value = user.username;
+  document.getElementById("authUser").setAttribute("readonly","readonly");
+  // password becomes optional "new password"
+  document.getElementById("authPass").value = "";
+  document.getElementById("authPass").placeholder = "Leave blank to keep current password";
+  hideBanner(document.getElementById("authBanner"));
+  const backdrop = document.getElementById("authBackdrop");
+  backdrop.classList.add("show");
+  backdrop.setAttribute("aria-hidden","false");
+  trapFocus(backdrop.querySelector('#authDialog'), backdrop);
+  setTimeout(()=>document.getElementById("authPass").focus(), 90);
+}
+
+function closeAuth() {
+  const b = document.getElementById("authBackdrop"); b.classList.remove("show"); b.setAttribute("aria-hidden","true");
+  releaseFocusTrap(b.querySelector('#authDialog'));
+  // ensure username field becomes editable again for next register
+  document.getElementById("authUser").removeAttribute("readonly");
+  document.getElementById("authPass").placeholder = "";
+}
+
+function toggleAuthMode(){ openAuth(authMode === "login" ? "register" : "login"); }
+
+document.getElementById("authForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const banner = document.getElementById("authBanner");
+  hideBanner(banner);
+  const username = document.getElementById("authUser").value.trim();
+  const password = document.getElementById("authPass").value;
+  if (!username) { showBanner(banner, "Username is required."); return; }
+
+  if (authMode === "register") {
+    if (!password) { showBanner(banner, "Password is required."); return; }
+    if (STATE.users.some(u => u.username === username)) { showBanner(banner, "That username is already taken."); return; }
+    const preferences = Array.from(document.querySelectorAll("#prefTags .tag.on")).map(el => el.dataset.tag);
+    STATE.users.push({ id: uuid(), username, password, preferences });
+    STATE.sessionUser = username;
+  } else if (authMode === "profile") {
+    const user = currentUser();
+    if (!user) { showBanner(banner, "No signed-in user found."); return; }
+    // update preferences
+    const preferences = Array.from(document.querySelectorAll("#prefTags .tag.on")).map(el => el.dataset.tag);
+    user.preferences = preferences;
+    // update password if provided
+    if (password) user.password = password;
+    // ensure username wasn't changed (readonly in UI) and session remains
+    await saveState();
+    renderNavUser();
+    closeAuth();
+    return;
+  } else { // login
+    if (!password) { showBanner(banner, "Password is required."); return; }
+    const u = STATE.users.find(u => u.username === username && u.password === password);
+    if (!u) { showBanner(banner, "Invalid username or password."); return; }
+    STATE.sessionUser = username;
+  }
+  await saveState();
+  renderNavUser();
+  closeAuth();
+  setView(authMode === "register" ? "recommendations" : "trips");
+});
+
+function showBanner(el, msg){ el.textContent = msg; el.className = "banner error show"; }
+function hideBanner(el){ el.className = "banner"; }
+
+/* =========================================================================
+   LOGOUT (fixed)
+   ========================================================================= */
+async function logout() {
+  // clear session
+  STATE.sessionUser = null;
+
+  // persist immediately
+  try { await saveState(); } catch (e) { console.warn("Failed to save state on logout", e); }
+
+  // close any open modal and release focus traps
+  try { closeAuth(); } catch (e) {}
+  try { closeTripModal(); } catch (e) {}
+
+  // update UI and navigate home
+  renderNavUser();
+  setView('home');
+}
+
+/* =========================================================================
+   TRIP PLANNING with edit/delete
+   ========================================================================= */
+let activeDestId = null;
+let activeEditItineraryId = null;
+
+function openTripModal(destId) {
+  if (!isAuthed()) { openAuth('login'); return; }
+  if (!destId) return;
+  activeDestId = destId;
+  const dest = DESTINATIONS.find(d => d.id === destId);
+  const titleEl = document.getElementById("tripModalTitle");
+  titleEl.textContent = activeEditItineraryId ? `Edit trip to ${dest.name}` : `Plan a trip to ${dest.name}`;
+  document.getElementById("tripForm").reset();
+  hideBanner(document.getElementById("tripBanner"));
+  const b = document.getElementById("tripBackdrop");
+  b.classList.add("show");
+  b.setAttribute("aria-hidden","false");
+  trapFocus(b.querySelector('#tripDialog'), b);
+  setTimeout(()=>document.getElementById("tripStart").focus(), 120);
+
+  // if editing, prefill fields
+  if (activeEditItineraryId) {
+    const it = STATE.itineraries.find(i => i.id === activeEditItineraryId);
+    if (it) {
+      document.getElementById("tripStart").value = it.start_date;
+      document.getElementById("tripEnd").value = it.end_date;
+      document.getElementById("tripNotes").value = it.notes || "";
+    }
+  }
+}
+function closeTripModal(){ const b = document.getElementById("tripBackdrop"); b.classList.remove("show"); b.setAttribute("aria-hidden","true"); releaseFocusTrap(b.querySelector('#tripDialog')); activeEditItineraryId = null; }
+
+document.getElementById("tripForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const banner = document.getElementById("tripBanner");
+  const start = document.getElementById("tripStart").value;
+  const end = document.getElementById("tripEnd").value;
+  if (!start || !end) { showBanner(banner, "Start and end dates are required."); return; }
+  const dest = DESTINATIONS.find(d => d.id === activeDestId);
+  if (!dest) { showBanner(banner, "Unknown destination."); return; }
+
+  if (activeEditItineraryId) {
+    // update existing itinerary
+    const it = STATE.itineraries.find(i => i.id === activeEditItineraryId);
+    if (it) {
+      it.start_date = start; it.end_date = end; it.notes = document.getElementById("tripNotes").value;
+    }
+  } else {
+    STATE.itineraries.push({
+      id: uuid(), user: STATE.sessionUser,
+      destination_id: dest.id, destination_name: dest.name,
+      start_date: start, end_date: end,
+      notes: document.getElementById("tripNotes").value,
+      shared_with: [], created_at: new Date().toISOString()
+    });
+  }
+  await saveState();
+  closeTripModal();
+  setView("trips");
+});
+
+function myItineraries(){ return STATE.itineraries.filter(it => it.user === STATE.sessionUser).sort((a,b)=>a.start_date.localeCompare(b.start_date)); }
+
+function renderTrips() {
+  const gate = document.getElementById("tripGate");
+  const grid = document.getElementById("tripGrid");
+  if (!isAuthed()) {
+    gate.innerHTML = `<div class="card">Log in to see your trips. <button class="btn btn-sm" style="margin-left:8px;" onclick="openAuth('login')">Log in</button></div>`;
+    grid.innerHTML = ""; return;
+  }
+  gate.innerHTML = "";
+  const mine = myItineraries();
+  if (mine.length === 0) {
+    grid.innerHTML = `<div class="card" style="grid-column:1/-1;text-align:center;color:var(--ink-soft);">No trips yet — plan one from the Destinations tab.</div>`;
+    return;
+  }
+  grid.innerHTML = mine.map(it => `
+    <div class="card">
+      <div style="font-family:'Space Grotesk';font-weight:600;font-size:1.05rem;">${escapeHtml(it.destination_name)}</div>
+      <div style="color:var(--ink-soft);font-size:0.85rem;margin:4px 0 10px;">${it.start_date} → ${it.end_date}</div>
+      ${it.notes ? `<p style="font-size:0.85rem;color:var(--ink-soft);margin:0 0 10px;">${escapeHtml(it.notes)}</p>` : ""}
+      ${it.shared_with.length ? `<div style="font-size:0.8rem;color:var(--forest-dark);margin-bottom:8px;">Shared with: ${it.shared_with.map(escapeHtml).join(", ")}</div>` : ""}
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-outline btn-sm" onclick="startEditTrip('${it.id}')">Edit</button>
+        <button class="btn btn-outline btn-sm" onclick="deleteTrip('${it.id}')">Delete</button>
+        <button class="btn btn-outline btn-sm" onclick="shareTrip('${it.id}')" style="margin-left:auto;">Share</button>
+      </div>
+    </div>
+  `).join("");
+}
+
+function startEditTrip(itId) {
+  const it = STATE.itineraries.find(i => i.id === itId);
+  if (!it) return;
+  activeEditItineraryId = itId;
+  openTripModal(it.destination_id);
+}
+
+async function deleteTrip(itId) {
+  if (!confirm("Delete this trip? This action cannot be undone.")) return;
+  STATE.itineraries = STATE.itineraries.filter(i => i.id !== itId);
+  await saveState();
+  renderTrips();
+}
+
+async function shareTrip(itId) {
+  const username = prompt("Share this trip with which username?");
+  if (!username) return;
+  const target = STATE.users.find(u => u.username === username.trim());
+  if (!target) { alert(`No such user '${username}'. (They need to have registered in this browser.)`); return; }
+  const it = STATE.itineraries.find(i => i.id === itId);
+  if (!it.shared_with.includes(target.username)) it.shared_with.push(target.username);
+  await saveState();
+  renderTrips();
+}
+
+/* =========================================================================
+   RECOMMENDATIONS
+   ========================================================================= */
+function scoreDestination(dest, prefs, pastTags) {
+  const p = Array.isArray(prefs) ? prefs : [];
+  const pt = Array.isArray(pastTags) ? pastTags : [];
+  let score = dest.tags.filter(t => p.includes(t)).length * 3;
+  score += dest.tags.filter(t => pt.includes(t)).length * 2;
+  score += dest.popularity / 20;
+  return Math.round(score * 100) / 100;
+}
+function renderRecommendations() {
+  const gate = document.getElementById("recGate");
+  const content = document.getElementById("recContent");
+  if (!isAuthed()) {
+    gate.innerHTML = `<div class="card">Log in (and pick some interests) to get personalized recommendations. <button class="btn btn-sm" style="margin-left:8px;" onclick="openAuth('login')">Log in</button></div>`;
+    content.style.display = "none"; return;
+  }
+  gate.innerHTML = ""; content.style.display = "block";
+  const user = currentUser();
+  user.preferences = Array.isArray(user.preferences) ? user.preferences : [];
+  const mine = myItineraries();
+  const visitedIds = new Set(mine.map(it => it.destination_id));
+  const pastTags = Array.from(new Set(mine.flatMap(it => (DESTINATIONS.find(d => d.id === it.destination_id) || {tags:[]}).tags)));
+  document.getElementById("recBasis").innerHTML =
+    `<strong>Based on preferences:</strong> ${user.preferences.length ? user.preferences.map(t=>`<span class="tag">${t}</span>`).join(" ") : "<em>none set</em>"}<br><br>
+     <strong>Based on past trips:</strong> ${pastTags.length ? pastTags.map(t=>`<span class="tag">${t}</span>`).join(" ") : "<em>none yet</em>"}`;
+
+  const scored = DESTINATIONS.filter(d => !visitedIds.has(d.id))
+    .map(d => ({ d, score: scoreDestination(d, user.preferences, pastTags) }))
+    .sort((a,b) => b.score - a.score).slice(0,6);
+
+  document.getElementById("recGrid").innerHTML = scored.map(({d,score}) => `
+    <div class="card" style="border-left:4px solid ${regionColor(d.region)};">
+      <div style="display:flex;justify-content:space-between;align-items:start;">
+        <div style="font-family:'Space Grotesk';font-weight:600;font-size:1.05rem;">${d.isCaseStudy ? "★ " : ""}${d.name}</div>
+        <span class="tag" style="background:#F5E6C4;color:var(--gold-dark);">score ${score}</span>
+      </div>
+      <div style="color:var(--ink-soft);font-size:0.85rem;margin:2px 0 8px;">${d.region}</div>
+      <p style="font-size:0.86rem;color:var(--ink-soft);margin:0 0 12px;">${d.description}</p>
+      <button class="btn btn-sm" style="width:100%;" onclick="setView('destinations');document.getElementById('destQ').value='${escapeHtml(d.name)}';searchDest();">View &amp; plan</button>
+    </div>
+  `).join("");
+}
+
+/* =========================================================================
+   DESTINATIONS VIEW — search / filter
+   ========================================================================= */
+function populateDestFilters() {
+  const regionSel = document.getElementById("destRegion");
+  const tagSel = document.getElementById("destTag");
+  Array.from(new Set(DESTINATIONS.map(d=>d.region))).sort().forEach(r => regionSel.innerHTML += `<option value="${r}">${r}</option>`);
+  ALL_TAGS.forEach(t => tagSel.innerHTML += `<option value="${t}">${t}</option>`);
+}
+function searchDest() {
+  const q = document.getElementById("destQ").value.trim().toLowerCase();
+  const region = document.getElementById("destRegion").value;
+  const tag = document.getElementById("destTag").value;
+  let results = DESTINATIONS.filter(d =>
+    (!q || d.name.toLowerCase().includes(q) || d.description.toLowerCase().includes(q)) &&
+    (!region || d.region === region) &&
+    (!tag || d.tags.includes(tag))
+  ).sort((a,b) => b.popularity - a.popularity);
+
+  document.getElementById("destCount").textContent = `${results.length} destination${results.length===1?"":"s"}`;
+  const grid = document.getElementById("destGrid");
+  if (results.length === 0) {
+    grid.innerHTML = `<div class="card" style="grid-column:1/-1;text-align:center;color:var(--ink-soft);">No destinations match. Try a different region or activity.</div>`;
+    return;
+  }
+  grid.innerHTML = results.map(d => `
+    <div class="card" style="border-left:4px solid ${regionColor(d.region)};${d.isCaseStudy ? 'box-shadow:0 0 0 1px var(--gold);' : ''}">
+      <div style="display:flex;justify-content:space-between;align-items:start;">
+        <div style="font-family:'Space Grotesk';font-weight:600;font-size:1.05rem;">${d.isCaseStudy ? "★ " : ""}${d.name}</div>
+        <span class="tag">${d.region}</span>
+      </div>
+      <p style="font-size:0.86rem;color:var(--ink-soft);margin:8px 0 12px;min-height:38px;">${d.description}</p>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;">
+        ${d.tags.map(t => `<span class="tag">${t}</span>`).join("")}
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn" style="flex:1" onclick="openTripModal('${d.id}')">Plan a trip here</button>
+        <button class="btn btn-outline" style="flex:1" onclick="setView('map');setTimeout(()=>{ if (fullMap) fullMap.setView([${d.lat}, ${d.lng}], 10); }, 200)">View on map</button>
+      </div>
+    </div>
+  `).join("");
+}
+["destQ","destRegion","destTag"].forEach(id => {
+  document.getElementById(id).addEventListener(id === "destQ" ? "input" : "change", searchDest);
+});
+
+/* =========================================================================
+   FEATURED (home)
+   ========================================================================= */
+function renderFeatured() {
+  const top = [...DESTINATIONS].sort((a,b)=>b.popularity-a.popularity).slice(0,3);
+  document.getElementById("featuredGrid").innerHTML = top.map(d => `
+    <a href="javascript:void(0)" onclick="setView('destinations')" class="card" style="border-left:4px solid ${regionColor(d.region)};display:block;">
+      <div style="font-family:'Space Grotesk';font-weight:600;font-size:1.02rem;">${d.isCaseStudy ? "★ " : ""}${d.name}</div>
+      <div style="color:var(--ink-soft);font-size:0.83rem;margin:4px 0 8px;">${d.region}</div>
+      <div style="font-size:0.85rem;color:var(--ink-soft);">${d.description}</div>
+    </a>
+  `).join("");
+}
+
+/* =========================================================================
+   MAPS (Leaflet)
+   ========================================================================= */
+let homeMap, fullMap;
+function goldStarIcon() {
+  return L.divIcon({
+    className: "", html: `<div style="font-size:22px;line-height:1;filter:drop-shadow(0 1px 1px rgba(0,0,0,.35));">★</div>`,
+    iconSize: [22,22], iconAnchor: [11,11]
+  });
+}
+function dotIcon(color) {
+  return L.divIcon({
+    className: "", html: `<div style="width:14px;height:14px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.4);"></div>`,
+    iconSize:[14,14], iconAnchor:[7,7]
+  });
+}
+function initHomeMap() {
+  try {
+    homeMap = L.map('homeMap', { scrollWheelZoom:false }).setView([4.1527, 9.2920], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap contributors', maxZoom: 18 }).addTo(homeMap);
+    BUEA_SPOTS.forEach(s => {
+      L.marker([s.lat, s.lng], { icon: dotIcon(regionColor("Southwest")) }).addTo(homeMap)
+        .bindPopup(`<strong>${escapeHtml(s.name)}</strong><br><span style="color:#3F5147;font-size:0.85em;">${escapeHtml(s.description)}</span>`);
+    });
+  } catch (e) { console.warn("Leaflet home map init failed", e); }
+}
+function initFullMap() {
+  try {
+    fullMap = L.map('fullMap').setView([5.5, 11.5], 6);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap contributors', maxZoom: 18 }).addTo(fullMap);
+    DESTINATIONS.forEach(d => {
+      const icon = d.isCaseStudy ? goldStarIcon() : dotIcon(regionColor(d.region));
+      L.marker([d.lat, d.lng], { icon }).addTo(fullMap)
+        .bindPopup(`<strong>${d.isCaseStudy ? "★ " : ""}${escapeHtml(d.name)}</strong><br><span style="color:#3F5147;font-size:0.85em;">${escapeHtml(d.region)} · ${escapeHtml(d.description)}</span>`);
+    });
+  } catch (e) { console.warn("Leaflet full map init failed", e); }
+}
+
+/* =========================================================================
+   UTIL
+   ========================================================================= */
+function uuid() {
+  try { if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID(); }
+  catch (e) {}
+  return 'id-' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-3);
+}
+
+/* =========================================================================
+   FOCUS TRAP for modals
+   ========================================================================= */
+const _trapData = new WeakMap();
+function trapFocus(dialog, backdrop) {
+  if (!dialog) return;
+  const focusable = dialog.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])');
+  const list = Array.from(focusable);
+  const first = list[0] || dialog;
+  const last = list[list.length-1] || dialog;
+  const prevActive = document.activeElement;
+  function onKey(e) {
+    if (e.key === 'Tab') {
+      if (list.length === 0) { e.preventDefault(); return; }
+      if (e.shiftKey) {
+        if (document.activeElement === first || document.activeElement === dialog) { e.preventDefault(); last.focus(); }
+      } else {
+        if (document.activeElement === last) { e.preventDefault(); first.focus(); }
+      }
+    } else if (e.key === 'Escape') {
+      // allow global handler to close
+    }
+  }
+  dialog.addEventListener('keydown', onKey);
+  _trapData.set(dialog, { onKey, prevActive });
+  // ensure dialog itself is focusable
+  if (!dialog.hasAttribute('tabindex')) dialog.setAttribute('tabindex','-1');
+  setTimeout(()=> first.focus(), 50);
+}
+function releaseFocusTrap(dialog) {
+  if (!dialog) return;
+  const info = _trapData.get(dialog);
+  if (info) {
+    dialog.removeEventListener('keydown', info.onKey);
+    if (info.prevActive && typeof info.prevActive.focus === 'function') info.prevActive.focus();
+    _trapData.delete(dialog);
+  }
+}
+
+/* close modals on backdrop click / Escape */
+document.getElementById('authBackdrop').addEventListener('click', function(e){ if (e.target === this) closeAuth(); });
+document.getElementById('tripBackdrop').addEventListener('click', function(e){ if (e.target === this) closeTripModal(); });
+document.addEventListener('keydown', function(e){
+  if (e.key === 'Escape') {
+    if (document.getElementById('authBackdrop').classList.contains('show')) closeAuth();
+    if (document.getElementById('tripBackdrop').classList.contains('show')) closeTripModal();
+  }
+});
+
+/* =========================================================================
+   INIT
+   ========================================================================= */
+(async function init() {
+  await loadState();
+  renderNavUser();
+  renderFeatured();
+  populateDestFilters();
+  searchDest();
+  initHomeMap();
+  initFullMap();
+})();
+</script>
+</body>
+</html>
